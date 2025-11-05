@@ -1,20 +1,36 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+# QuickDoc Chatbot
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+This repository contains the **chatbot service for the QuickDoc application**.  
+It powers intelligent conversations, document understanding, and semantic search with real-time communication support.
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+---
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+## 🧠 Tech Stack
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+- **Python** – Core backend language  
+- **FastAPI** – High-performance API and WebSocket framework  
+- **LangChain** – LLM orchestration and agent logic  
+- **Vector Database** – For semantic search and context retrieval  
+- **SQL Database** – For structured data storage and management  
+- **WebSockets** – Enables real-time, bidirectional communication  
+
+---
+
+## 🚀 Overview
+
+The QuickDoc Chatbot integrates with the QuickDoc platform to deliver:
+
+- Context-aware responses using embeddings stored in the vector DB  
+- Real-time chat through WebSockets  
+- Hybrid search combining SQL and vector data  
+- LLM-powered query understanding and summarization  
+
+---
+
+## ⚙️ Deployment
+
+This backend is designed to be **deployment-ready** for platforms like **Azure App Service**.  
+It supports environment configuration, WebSocket connections, and scalable FastAPI architecture.
+
+
+
