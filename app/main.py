@@ -46,10 +46,10 @@ async def websocket_chat(websocket: WebSocket):
                 await websocket.send_text(llm_response.content)
 
             except Exception as e:
-                print(f"❌ LLM Error: {e}")
+                print(f"LLM Error: {e}")
                 await websocket.send_text("Sorry, I couldn’t process that right now.")
     except WebSocketDisconnect:
-        print("❌ Client disconnected")
+        print("Client disconnected")
 
 
 app.include_router(router)
