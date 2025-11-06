@@ -24,7 +24,6 @@ llm = AzureChatOpenAI(
     api_key=os.getenv("api_key"),
     azure_deployment=os.getenv("azure_deployment"),
     api_version=os.getenv("api_version"),
-    streaming=True
 )
 
 prompt = ChatPromptTemplate.from_template("You are QuickDoc Assistant. {input}")
@@ -33,26 +32,18 @@ prompt = ChatPromptTemplate.from_template("You are QuickDoc Assistant. {input}")
 @router.websocket("/ws/chat")
 async def websocket_chat(websocket: WebSocket):
     await websocket.accept()
-    print("✅ Client connected")
+    print("Client connected")
 
     try:
         while True:
             user_msg = await websocket.receive_text()
-            print(f"📩 Received: {user_msg}")
+            print(f"Received: {user_msg}")
 
             try:
                 formatted_prompt = prompt.format_messages(input=user_msg)
-
-                # Send typing signal to frontend
-                await websocket.send_text("__START_STREAM__")
-
-                # Stream chunks from model
-                async for chunk in llm.astream(formatted_prompt):
-                    if chunk.content:
-                        await websocket.send_text(chunk.content)
-
-                # Signal that stream is finished
-                await websocket.send_text("__END_STREAM__")
+                llm_response = llm.invoke(formatted_prompt)
+                print("llm response:",llm_response.content)
+                await websocket.send_text(llm_response.content)
 
             except Exception as e:
                 print(f"❌ LLM Error: {e}")
