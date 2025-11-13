@@ -1,7 +1,7 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import AzureOpenAIEmbeddings
 from agent.setup.chroma_db.chroma_setup import get_chroma_client, get_or_create_collection
+from sentence_transformers import SentenceTransformer
 import os
 from typing import List, Dict
 from dotenv import load_dotenv
@@ -10,17 +10,12 @@ load_dotenv()
 
 class FAQProcessor:
     def __init__(self):
-        """Initialize the FAQ processor with ChromaDB client and embeddings."""
+        """Initialize the FAQ processor with ChromaDB client and sentence transformers."""
         self.chroma_client = get_chroma_client()
         self.collection = get_or_create_collection(self.chroma_client)
         
-        # Azure OpenAI Embeddings
-        self.embeddings = AzureOpenAIEmbeddings(
-            azure_endpoint=os.getenv("azure_endpoint").strip('"'),
-            api_key=os.getenv("api_key").strip('"'),
-            azure_deployment="text-embedding-ada-002",  # Update if you have a different deployment
-            api_version=os.getenv("api_version").strip('"')
-        )
+        # Load sentence transformer model for embeddings
+        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         
         # Text splitter for chunking
         self.text_splitter = RecursiveCharacterTextSplitter(
@@ -62,8 +57,8 @@ class FAQProcessor:
                 })
                 ids.append(f"{filename}_chunk_{i}")
             
-            # Generate embeddings
-            embeddings_list = self.embeddings.embed_documents(documents)
+            # Generate embeddings using sentence-transformers
+            embeddings_list = self.embedding_model.encode(documents).tolist()
             
             # Add to ChromaDB
             self.collection.add(
@@ -101,10 +96,10 @@ class FAQProcessor:
             Dict with search results
         """
         try:
-            # Embed the query
-            query_embedding = self.embeddings.embed_query(query)
+            # Generate embedding for the query
+            query_embedding = self.embedding_model.encode([query])[0].tolist()
             
-            # Search in ChromaDB
+            # Search in ChromaDB using embeddings
             results = self.collection.query(
                 query_embeddings=[query_embedding],
                 n_results=n_results

@@ -5,6 +5,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
+from agent.setup.chroma_db import pdf_router
 
 load_dotenv()
 
@@ -60,3 +61,4 @@ async def websocket_chat(websocket: WebSocket):
         print("Client disconnected")
 
 app.include_router(router)
+app.include_router(pdf_router.router, prefix="/pdf", tags=["PDF Upload"])
