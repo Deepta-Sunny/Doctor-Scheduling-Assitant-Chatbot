@@ -9,3 +9,4 @@ class QuickDocState(TypedDict):
     location: Optional[str]
     doctor_results: Optional[str]  
     next_node: Optional[str]
+    usetools: Optional[bool]

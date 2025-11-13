@@ -1,3 +1,4 @@
+from agent.utils.nodes.tool_node import tools_node
 from agent.utils.nodes.clarify_node import clarify
 from agent.utils.nodes.faq_node import faq
 from agent.utils.nodes.router_node import intent_router
@@ -9,15 +10,14 @@ from langgraph.graph import StateGraph,START,END
 def create_workflow():
     """This is a function to create a compile the graph"""
 
-    memory = MemorySaver
+    memory = MemorySaver()
     workflow = StateGraph(QuickDocState)
 
     workflow.add_node("intent_router_node",intent_router)
     workflow.add_node("clarify_node",clarify)
     workflow.add_node("symptoms_node",symptoms)
     workflow.add_node("faq_node",faq)
-
-    
+    workflow.add_node("tools_node",tools_node)
 
     workflow.add_edge(START,"intent_router_node")
     workflow.add_conditional_edges(
@@ -30,6 +30,24 @@ def create_workflow():
             "end": END
         }
     )
+    workflow.add_conditional_edges(
+        "symptoms_node",
+        lambda state:state.get("use_tools", False),
+        {
+            True: "tools_node",
+            False: END
+        }
+    )
+    workflow.add_conditional_edges(
+        "faq_node",
+        lambda state:state.get("use_tools", False),
+        {
+            True: "tools_node",
+            False: END
+        }
+    )
+    workflow.add_edge("tools_node","symptoms_node")
+    workflow.add_edge("tools_node","faq_node")
     workflow.add_edge("clarify_node",END)
     workflow.add_edge("symptoms_node",END)
     workflow.add_edge("faq_node",END)
