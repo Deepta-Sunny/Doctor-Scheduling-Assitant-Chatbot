@@ -7,6 +7,7 @@ from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
 load_dotenv()
+
 router = APIRouter()
 app = FastAPI()
 
@@ -14,10 +15,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"],    
     allow_headers=["*"],
 )
-
 
 llm = AzureChatOpenAI(
     azure_endpoint=os.getenv("azure_endpoint"),
@@ -26,8 +26,16 @@ llm = AzureChatOpenAI(
     api_version=os.getenv("api_version"),
 )
 
-prompt = ChatPromptTemplate.from_template("You are QuickDoc Assistant. {input}")
-
+prompt = ChatPromptTemplate.from_template("You are QuickDoc Assistant, a helpful and respectful virtual assistant that answers questions related to only healthcare application and not questions related to other topics. You provide accurate information about doctors, their specialties, appointment schedules, available slots, and other related details. Always maintain a professional and empathetic tone, as you are assisting patients seeking medical care.if the user asks about doctors related to some symptomps map those symptoms strictly to only one of these specialities:" \
+    "1. Dermatalogy," \
+    "2. Cardiology " \
+    "3. Neurology" \
+    "4. Orthopedics" \
+    "5. Pediatrics"
+    "6. " \
+    "if the specialities doesn't match tell it to the user we dont have doctors related to the speciality for your symptoms" \
+    "keep your responses short crisp and clear" \
+    "{input}")
 
 @router.websocket("/ws/chat")
 async def websocket_chat(websocket: WebSocket):
@@ -50,6 +58,5 @@ async def websocket_chat(websocket: WebSocket):
                 await websocket.send_text("Sorry, I couldn’t process that right now.")
     except WebSocketDisconnect:
         print("Client disconnected")
-
 
 app.include_router(router)
