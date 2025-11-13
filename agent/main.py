@@ -1,11 +1,11 @@
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
-from setup.sql_db import doctor_endpoints
+from agent.setup.sql_db import doctor_endpoints
 from agent.setup.chroma_db import pdf_router
 
 load_dotenv()

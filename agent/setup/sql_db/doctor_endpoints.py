@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
 
-from setup.sql_db.database_setup import get_db, Doctor, User
+from agent.setup.sql_db.database_setup import get_db, Doctor, User
 
 router = APIRouter(prefix="/api/doctors", tags=["doctors"])
 
