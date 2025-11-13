@@ -51,16 +51,14 @@ def visualize_graph():
     agent = create_workflow()
     
     try:
-        # Generate PNG image
         png_data = agent.get_graph().draw_mermaid_png()
         
-        # Save to file
-        with open("workflow_graph.png", "wb") as f:
-            f.write(png_data)
+        with open("workflow_graph.png", "wb") as file:
+            file.write(png_data)
         
         print("Graph visualization saved as 'workflow_graph.png'")
-    except Exception as e:
-        print(f"Error generating graph visualization: {e}")
+    except Exception as exception:
+        print(f"Error generating graph visualization: {exception}")
         print("Make sure you have 'pygraphviz' installed: pip install pygraphviz")
 
 
