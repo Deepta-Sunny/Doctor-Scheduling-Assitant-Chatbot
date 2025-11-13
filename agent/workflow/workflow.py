@@ -46,11 +46,16 @@ def create_workflow():
             False: END
         }
     )
-    workflow.add_edge("tools_node","symptoms_node")
-    workflow.add_edge("tools_node","faq_node")
+    workflow.add_conditional_edges(
+        "tools_node",
+        lambda state:state.get("next_node", "end"),
+        {
+            "symptoms_node": "symptoms_node",
+            "faq_node": "faq_node",
+            "end": END
+        }
+    )
     workflow.add_edge("clarify_node",END)
-    workflow.add_edge("symptoms_node",END)
-    workflow.add_edge("faq_node",END)
 
     agent = workflow.compile(checkpointer=memory)
 
