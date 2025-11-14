@@ -57,7 +57,7 @@ class Doctor(Base):
     State = Column(String(255))
     Pincode = Column(String(255))
     HospitalName = Column(String(255))
-    Speciality = Column(String(255))
+    Speciality = Column(Integer)  # Specialty ID (1-15)
     CreatedBy = Column(String(255))
     CreatedOn = Column(DateTime)
     UpdatedBy = Column(String(255))

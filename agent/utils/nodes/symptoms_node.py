@@ -1,6 +1,5 @@
 from agent.setup.llm_setup.llm_setup import setup_llm
 from agent.utils.state.quickdoc_state import QuickDocState
-from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage
 from agent.utils.tools.quickDoc_tool import quickDoc_tools
 import os
@@ -10,64 +9,66 @@ load_dotenv()
 
 llm = setup_llm()
 
+# Bind tools to the LLM
 llm_with_tools = llm.bind_tools(quickDoc_tools)
+
+# Specialty mapping: name -> ID (for reference, actual mapping is in the tool)
+SPECIALTY_MAP = {
+    "Dermatology": 1, "Cardiology": 2, "Neurology": 3, "Orthopedics": 4,
+    "Pediatrics": 5, "Gynecology": 6, "Ophthalmology": 7, "Psychiatry": 8,
+    "ENT": 9, "Urology": 10, "Oncology": 11, "Gastroenterology": 12,
+    "Pulmonology": 13, "Nephrology": 14, "Endocrinology": 15
+}
 
 def symptoms(state: QuickDocState) -> QuickDocState:
     """
-    Handle symptom queries and doctor search.
-    Uses quickDoc tools to search for doctors based on symptoms, specialty, location.
-    Extracts symptoms, specialty, and location from user message.
+    Handle symptom-based queries and doctor search.
+    Analyzes symptoms and triggers doctor lookup tools.
+    The LLM will determine the specialty from symptoms and call the tool with the specialty name.
+    The tool will map the specialty name to ID and query the database.
     """
     messages = state.get("messages", [])
     
     if not messages:
         return state
     
+    user_text = messages[-1].content
+    
+    # Enhanced system prompt to guide the LLM
+    system_prompt = f"""You are a medical assistant. When a user describes symptoms, you should:
+1. Identify the most appropriate medical specialty from this list: {', '.join(SPECIALTY_MAP.keys())}
+2. Use the get_doctor_details tool with the specialty name and city (if provided)
+3. Always use EXACT specialty names from the list above
+
+Examples:
+- "I have chest pain in Mumbai" -> Call get_doctor_details with specialty_name="Cardiology", city="Mumbai"
+- "Skin rash" -> Call get_doctor_details with specialty_name="Dermatology"
+- "Headache and dizziness" -> Call get_doctor_details with specialty_name="Neurology"
+"""
+    
+    # Prepend system prompt if not already there
+    if not any(isinstance(msg, HumanMessage) and "medical assistant" in msg.content for msg in messages[:-1]):
+        messages_with_context = [HumanMessage(content=system_prompt)] + messages
+    else:
+        messages_with_context = messages
+    
     try:
-        conversation_history = messages
+        # Invoke LLM with tools to handle doctor search
+        response = llm_with_tools.invoke(messages_with_context)
         
-        system_message = """You are a medical assistant helping users find doctors.
-
-Your role:
-1. Extract symptoms, medical specialty needed, and location from user messages
-2. Use the search_doctors tool when you have enough information (specialty and location)
-3. Ask clarifying questions if information is missing
-4. Present doctor results in a friendly, organized way
-
-Available information to extract:
-- Symptoms: What the user is experiencing
-- Specialty: What type of doctor they need (e.g., cardiologist, dermatologist, general physician)
-- Location: City or area where they want to find a doctor
-
-If the user mentions symptoms, try to suggest an appropriate specialty.
-If information is incomplete, ask specific questions to gather what's needed.
-When you have specialty and location, use the search_doctors tool."""
-
-        messages_with_system = [HumanMessage(content=system_message)] + conversation_history
-        
-        response = llm_with_tools.invoke(messages_with_system)
-        
+        # If the LLM wants to use tools (search for doctors)
         if response.tool_calls:
             state["messages"].append(response)
             state["use_tools"] = True
-            state["next_node"] = "symptoms_node" 
-            
-            for tool_call in response.tool_calls:
-                if tool_call.get("name") == "search_doctors":
-                    args = tool_call.get("args", {})
-                    if "symptoms" in args:
-                        state["symptoms"] = args["symptoms"]
-                    if "specialty" in args:
-                        state["specialty"] = args["specialty"]
-                    if "location" in args:
-                        state["location"] = args["location"]
+            state["next_node"] = "symptoms_node"
         else:
+            # Direct response without tools
             state["messages"].append(response)
             state["use_tools"] = False
-        
+            
     except Exception as e:
-        error_message = f"I apologize, but I encountered an error: {str(e)}. Please try describing your symptoms again."
-        state["messages"].append(AIMessage(content=error_message))
+        error_msg = f"Error processing symptoms: {str(e)}"
+        state["messages"].append(AIMessage(content=error_msg))
         state["use_tools"] = False
     
-    return state 
+    return state

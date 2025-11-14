@@ -34,7 +34,9 @@ async def websocket_chat(websocket: WebSocket):
     try:
         while True:
             user_msg = await websocket.receive_text()
-            print(f"Received: {user_msg}")
+            print(f"\n{'='*60}")
+            print(f"[WEBSOCKET] Received: {user_msg}")
+            print(f"{'='*60}\n")
 
             try:
                 input_data = {
@@ -49,14 +51,16 @@ async def websocket_chat(websocket: WebSocket):
                 else:
                     response = "I couldn't process your request."
                 
-                print("Workflow response:", response)
+                print(f"[WEBSOCKET] Workflow response: {response[:200]}...\n")
                 await websocket.send_text(response)
 
             except Exception as e:
-                print(f"Workflow Error: {e}")
+                print(f"[WEBSOCKET] Workflow Error: {e}")
+                import traceback
+                traceback.print_exc()
                 await websocket.send_text(f"Sorry, I encountered an error: {str(e)}")
     except WebSocketDisconnect:
-        print("Client disconnected")
+        print("[WEBSOCKET] Client disconnected")
 
 app.include_router(router)
 app.include_router(doctor_endpoints.router)
