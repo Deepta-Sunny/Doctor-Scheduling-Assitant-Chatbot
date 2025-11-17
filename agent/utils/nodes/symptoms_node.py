@@ -26,8 +26,10 @@ def symptoms(state: QuickDocState) -> QuickDocState:
     Analyzes symptoms and triggers doctor lookup tools.
     The LLM will determine the specialty from symptoms and call the tool with the specialty name.
     The tool will map the specialty name to ID and query the database.
+    Uses conversation history for context-aware responses.
     """
     messages = state.get("messages", [])
+    conversation_summary = state.get("conversation_summary", "")
     print("********routed to symptoms_node********")
 
     
@@ -36,16 +38,34 @@ def symptoms(state: QuickDocState) -> QuickDocState:
     
     user_text = messages[-1].content
     
-    # Enhanced system prompt to guide the LLM
-    system_prompt = f"""You are a medical assistant. When a user describes symptoms, you should:
-1. Identify the most appropriate medical specialty from this list: {', '.join(SPECIALTY_MAP.keys())}
-2. Use the get_doctor_details tool with the specialty name and city (if provided)
-3. Always use EXACT specialty names from the list above
+    # Build conversation context from history
+    conversation_context = ""
+    if conversation_summary:
+        conversation_context = f"Previous conversation summary:\n{conversation_summary}\n\n"
+    
+    # Include last 10 messages for context
+    recent_messages = messages[-10:] if len(messages) >= 10 else messages
+    conversation_context += "Recent conversation:\n"
+    for msg in recent_messages[:-1]:  # Exclude current message
+        role = "User" if hasattr(msg, 'type') and msg.type == "human" else "Assistant"
+        conversation_context += f"{role}: {msg.content}\n"
+    
+    # Enhanced system prompt to guide the LLM with conversation context
+    system_prompt = f"""You are a medical assistant with access to the conversation history. 
+
+{conversation_context}
+
+When a user describes symptoms or asks follow-up questions:
+1. Reference previous symptoms or discussions from the conversation history
+2. Identify the most appropriate medical specialty from this list: {', '.join(SPECIALTY_MAP.keys())}
+3. Use the get_doctor_details tool with the specialty name and city (if provided)
+4. Always use EXACT specialty names from the list above
+5. If the user asks about previous symptoms (e.g., "what about my knee pain"), reference the conversation history
 
 Examples:
 - "I have chest pain in Mumbai" -> Call get_doctor_details with specialty_name="Cardiology", city="Mumbai"
-- "Skin rash" -> Call get_doctor_details with specialty_name="Dermatology"
-- "Headache and dizziness" -> Call get_doctor_details with specialty_name="Neurology"
+- "What about my knee pain?" -> Reference history, use specialty_name="Orthopedics"
+- "Also have headache" -> Consider previous symptoms + new symptom, choose appropriate specialty
 """
     
     # Prepend system prompt if not already there

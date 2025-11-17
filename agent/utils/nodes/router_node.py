@@ -16,6 +16,7 @@ def intent_router(state: QuickDocState) -> QuickDocState:
     - clarify_node: Unclear or ambiguous messages
     """
     messages = state.get("messages", [])
+    conversation_summary = state.get("conversation_summary", "")
     print("********routed to router_node********")
 
     
@@ -23,7 +24,19 @@ def intent_router(state: QuickDocState) -> QuickDocState:
         state["next_node"] = "clarify_node"
         return state
     
+    # Get last message and recent context (up to 10 messages)
     last_message = messages[-1].content.lower()
+    recent_messages = messages[-10:] if len(messages) >= 10 else messages
+    
+    # Build conversation context for intent detection
+    conversation_context = ""
+    if conversation_summary:
+        conversation_context = f"Previous conversation summary: {conversation_summary}\n\n"
+    
+    conversation_context += "Recent conversation:\n"
+    for msg in recent_messages:
+        role = "User" if hasattr(msg, 'type') and msg.type == "human" else "Assistant"
+        conversation_context += f"{role}: {msg.content}\n"
     
     # First check if the question is healthcare-related
     relevance_prompt = """
@@ -39,6 +52,7 @@ def intent_router(state: QuickDocState) -> QuickDocState:
     - Personal details like email, phone number, address
     - ANY QUESTION about QuickDoc, its features, purpose, usage, or services
     - ANY message containing the words "quickdoc" or "quick doc"
+    - Follow-up questions related to previous healthcare discussion
 
     Respond "no" if the question is:
     - General knowledge (geography, history, science)
@@ -52,10 +66,10 @@ def intent_router(state: QuickDocState) -> QuickDocState:
 
     
     try:
-        # Check if question is healthcare-related
+        # Check if question is healthcare-related with conversation context
         relevance_check = llm.invoke([
             HumanMessage(content=relevance_prompt),
-            HumanMessage(content=f"Is this healthcare-related: {last_message}")
+            HumanMessage(content=f"Conversation context:\n{conversation_context}\n\nIs this healthcare-related: {last_message}")
         ])
         
         is_relevant = relevance_check.content.strip().lower()
@@ -67,9 +81,9 @@ def intent_router(state: QuickDocState) -> QuickDocState:
             state["next_node"] = "clarify_node"
             return state
         
-        # If healthcare-related, classify intent
+        # If healthcare-related, classify intent with conversation context
         intent_prompt = """You are an intent classifier for a medical chatbot. 
-        Analyze the user's message and classify it into ONE of these categories:
+        Analyze the user's message IN THE CONTEXT of the conversation history and classify it into ONE of these categories:
         
         1. "faq" - Questions about POLICIES, RULES, PROCEDURES, SERVICE INFORMATION:
            - Questions starting with "Can I...?" about booking/service rules
@@ -82,6 +96,7 @@ def intent_router(state: QuickDocState) -> QuickDocState:
            - Physical symptoms or health issues (pain, fever, illness)
            - Active medical needs requiring immediate doctor consultation
            - Specific doctor specialty requests based on diagnosed conditions
+           - Follow-up questions about previously discussed symptoms
         
         3. "clarify" - Unclear, ambiguous, or too short messages
         
@@ -89,12 +104,13 @@ def intent_router(state: QuickDocState) -> QuickDocState:
         - "Can I [action related to booking/service]?" = faq (policy question)
         - "I have [medical symptom]" = symptoms (medical concern)
         - "I need [doctor type] for [condition]" = symptoms (medical need)
+        - Follow-up like "what about that?" = use conversation context to classify
         
         Respond with ONLY ONE WORD: faq, symptoms, or clarify"""
         
         response = llm.invoke([
             HumanMessage(content=intent_prompt),
-            HumanMessage(content=f"Classify this message: {last_message}")
+            HumanMessage(content=f"Conversation context:\n{conversation_context}\n\nClassify this message: {last_message}")
         ])
         
         intent = response.content.strip().lower()
