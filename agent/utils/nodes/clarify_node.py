@@ -15,6 +15,7 @@ def clarify(state: QuickDocState) -> QuickDocState:
     Guides users to provide more specific information about their needs.
     """
     messages = state.get("messages", [])
+    print("********routed to clarify_node********")
     
     if not messages:
         # Initial greeting
@@ -37,10 +38,19 @@ This message is unclear or too vague. Generate a helpful, friendly response that
 1. Acknowledges their message
 2. Asks a specific clarifying question
 3. Provides examples of what information would be helpful
+Only answer the questions related to medical appointments or general QuickDoc services.
+Do not answer any questions related to diagnosis or treatment and the below related questions
+
+    - General knowledge (geography, history, science)
+    - Cooking, weather, sports, entertainment
+    - Technology, programming, or other topics
+    - Jokes, stories, casual conversation
+    - Personal advice unrelated to health (relationships, finance)
+    - Medical diagnosis or treatment recommendations
 
 Guide them towards either:
 - Medical help: "I need a doctor for [symptom/condition] in [location]"
-- General questions: "What are your office hours?" or "Do you accept insurance?"
+- General questions: "How to cancel appointment" or "what is QuickDoc?"
 
 Keep your response concise (2-3 sentences) and friendly."""
     

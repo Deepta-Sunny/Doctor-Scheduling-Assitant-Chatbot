@@ -28,6 +28,8 @@ def symptoms(state: QuickDocState) -> QuickDocState:
     The tool will map the specialty name to ID and query the database.
     """
     messages = state.get("messages", [])
+    print("********routed to symptoms_node********")
+
     
     if not messages:
         return state
@@ -55,12 +57,12 @@ Examples:
     try:
         # Invoke LLM with tools to handle doctor search
         response = llm_with_tools.invoke(messages_with_context)
-        
+        print("**********symptomps response*****************",response)
         # If the LLM wants to use tools (search for doctors)
         if response.tool_calls:
             state["messages"].append(response)
             state["use_tools"] = True
-            state["next_node"] = "symptoms_node"
+        
         else:
             # Direct response without tools
             state["messages"].append(response)

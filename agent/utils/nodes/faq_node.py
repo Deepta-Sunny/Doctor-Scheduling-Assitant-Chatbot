@@ -14,9 +14,11 @@ llm_with_tools = llm.bind_tools(faq_tools)
 
 def faq(state: QuickDocState) -> QuickDocState:
     """
-    Handle FAQ queries - decides if tools are needed or generates direct response.
+    Handle FAQ queries - ALWAYS search the FAQ database before responding.
     """
     messages = state.get("messages", [])
+    print("********routed to faq_node********")
+
     
     if not messages:
         return state
@@ -27,7 +29,6 @@ def faq(state: QuickDocState) -> QuickDocState:
         if response.tool_calls:
             state["messages"].append(response)
             state["use_tools"] = True
-            state["next_node"] = "faq_node" 
         else:
             state["messages"].append(response)
             state["use_tools"] = False

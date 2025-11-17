@@ -1,12 +1,11 @@
-import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import HumanMessage
-from agent.setup.sql_db import doctor_endpoints
 from agent.setup.chroma_db import pdf_router
 from agent.workflow.workflow import create_workflow
+import uuid
 
 load_dotenv()
 
@@ -28,7 +27,7 @@ async def websocket_chat(websocket: WebSocket):
     await websocket.accept()
     print("Client connected")
   
-    session_id = str(id(websocket))
+    session_id = str(uuid.uuid4())
     config = {"configurable": {"thread_id": session_id}}
 
     try:
@@ -63,5 +62,4 @@ async def websocket_chat(websocket: WebSocket):
         print("[WEBSOCKET] Client disconnected")
 
 app.include_router(router)
-app.include_router(doctor_endpoints.router)
 app.include_router(pdf_router.router, prefix="/pdf", tags=["PDF Upload"])
