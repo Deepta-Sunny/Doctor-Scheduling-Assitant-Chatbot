@@ -12,7 +12,6 @@ DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 
-# Using pymssql instead of pyodbc (no ODBC driver required)
 connection_string = (
     f"mssql+pymssql://{DB_USER}:{quote_plus(DB_PASSWORD)}@{DB_SERVER}/{DB_NAME}"
 )
@@ -58,7 +57,7 @@ class Doctor(Base):
     State = Column(String(255))
     Pincode = Column(String(255))
     HospitalName = Column(String(255))
-    Speciality = Column(String(255))
+    Speciality = Column(Integer)  # Specialty ID (1-15)
     CreatedBy = Column(String(255))
     CreatedOn = Column(DateTime)
     UpdatedBy = Column(String(255))

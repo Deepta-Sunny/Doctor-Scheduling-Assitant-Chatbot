@@ -1,11 +1,11 @@
 from dotenv import load_dotenv
-import os
 from fastapi import FastAPI
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from langchain_openai import AzureChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from setup.sql_db import doctor_endpoints
+from langchain_core.messages import HumanMessage
+from agent.setup.chroma_db import pdf_router
+from agent.workflow.workflow import create_workflow
+import uuid
 
 load_dotenv()
 
@@ -20,45 +20,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-llm = AzureChatOpenAI(
-    azure_endpoint=os.getenv("azure_endpoint"),
-    api_key=os.getenv("api_key"),
-    azure_deployment=os.getenv("azure_deployment"),
-    api_version=os.getenv("api_version"),
-)
-
-prompt = ChatPromptTemplate.from_template("You are QuickDoc Assistant, a helpful and respectful virtual assistant that answers questions related to only healthcare application and not questions related to other topics. You provide accurate information about doctors, their specialties, appointment schedules, available slots, and other related details. Always maintain a professional and empathetic tone, as you are assisting patients seeking medical care.if the user asks about doctors related to some symptomps map those symptoms strictly to only one of these specialities:" \
-    "1. Dermatalogy," \
-    "2. Cardiology " \
-    "3. Neurology" \
-    "4. Orthopedics" \
-    "5. Pediatrics"
-    "6. " \
-    "if the specialities doesn't match tell it to the user we dont have doctors related to the speciality for your symptoms" \
-    "keep your responses short crisp and clear" \
-    "{input}")
+workflow_app = create_workflow()
 
 @router.websocket("/ws/chat")
 async def websocket_chat(websocket: WebSocket):
     await websocket.accept()
     print("Client connected")
+  
+    session_id = str(uuid.uuid4())
+    config = {"configurable": {"thread_id": session_id}}
 
     try:
         while True:
             user_msg = await websocket.receive_text()
-            print(f"Received: {user_msg}")
+            print(f"\n{'='*60}")
+            print(f"[WEBSOCKET] Received: {user_msg}")
+            print(f"{'='*60}\n")
 
             try:
-                formatted_prompt = prompt.format_messages(input=user_msg)
-                llm_response = llm.invoke(formatted_prompt)
-                print("llm response:",llm_response.content)
-                await websocket.send_text(llm_response.content)
+                input_data = {
+                    "messages": [HumanMessage(content=user_msg)]
+                }
+                
+                result = workflow_app.invoke(input_data, config)
+                
+                if result.get("messages"):
+                    last_message = result["messages"][-1]
+                    response = last_message.content
+                else:
+                    response = "I couldn't process your request."
+                
+                print(f"[WEBSOCKET] Workflow response: {response[:200]}...\n")
+                await websocket.send_text(response)
 
             except Exception as e:
-                print(f"LLM Error: {e}")
-                await websocket.send_text("Sorry, I couldn’t process that right now.")
+                print(f"[WEBSOCKET] Workflow Error: {e}")
+                import traceback
+                traceback.print_exc()
+                await websocket.send_text(f"Sorry, I encountered an error: {str(e)}")
     except WebSocketDisconnect:
-        print("Client disconnected")
+        print("[WEBSOCKET] Client disconnected")
 
 app.include_router(router)
-app.include_router(doctor_endpoints.router)
+app.include_router(pdf_router.router, prefix="/pdf", tags=["PDF Upload"])
