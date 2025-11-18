@@ -85,11 +85,24 @@ Your response:"""
         state["next_node"] = "end"
         return state
     
-    # 4. Check if question is healthcare-related using LLM
+    # 4. Check if question is healthcare-related using LLM with conversation context
+    # Build conversation context (last 10 messages)
+    recent_messages = messages[-10:] if len(messages) >= 10 else messages
+    conversation_context = ""
+    if len(recent_messages) > 1:
+        conversation_context = "Recent conversation:\n"
+        for msg in recent_messages[:-1]:  # Exclude current message
+            role = "User" if hasattr(msg, 'type') and msg.type == "human" else "Assistant"
+            conversation_context += f"{role}: {msg.content}\n"
+        conversation_context += "\n"
+    
     relevance_prompt = """Determine if this is about healthcare/QuickDoc services OR completely off-topic.
+Consider the conversation context to understand follow-up questions.
 
 HEALTHCARE-RELATED (respond "yes"):
 - Finding doctors (by specialty, symptoms, location)
+- Follow-up questions about previously discussed doctors/symptoms/locations
+- Short location responses like "in [city]" when following up on doctor searches
 - Questions about QuickDoc services, policies, hours, insurance, appointments
 - Account/login questions (login, registration, email, password, profile)
 - Medical symptoms with intent to find a doctor
@@ -98,7 +111,7 @@ HEALTHCARE-RELATED (respond "yes"):
 - Booking policies, appointment rules, scheduling questions
 
 OFF-TOPIC (respond "no"):
-- Weather, sports, news, entertainment
+- Weather, sports, news, entertainment (when NOT following healthcare discussion)
 - Jokes, stories, poems, games
 - Technology, cooking, travel (not healthcare-related)
 - General knowledge questions (math, history, science)
@@ -110,7 +123,7 @@ Respond with ONLY: yes or no"""
     try:
         relevance_check = llm.invoke([
             HumanMessage(content=relevance_prompt),
-            HumanMessage(content=f"Is this healthcare-related: {last_message}")
+            HumanMessage(content=f"{conversation_context}Current user message: {last_message}\n\nIs this healthcare-related?")
         ])
         
         is_relevant = relevance_check.content.strip().lower()
