@@ -72,7 +72,6 @@ def create_workflow():
         {
             "symptoms_node": "symptoms_node",
             "faq_node": "faq_node",
-            "end": "output_guardrails_node"
         }
     )
     workflow.add_edge("clarify_node", "output_guardrails_node")

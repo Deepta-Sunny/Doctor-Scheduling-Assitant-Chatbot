@@ -13,7 +13,7 @@ SPECIALTY_MAP = {
 # Reverse mapping: ID -> name
 SPECIALTY_ID_TO_NAME = {v: k for k, v in SPECIALTY_MAP.items()}
 
-@tool("get_doctor_details", return_direct=True)
+@tool("get_doctor_details")
 def get_doctor_details(specialty_name: str, city: str = None) -> str:
     """
     Fetch doctor details directly from SQL database.

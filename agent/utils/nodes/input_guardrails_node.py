@@ -96,27 +96,45 @@ Your response:"""
             conversation_context += f"{role}: {msg.content}\n"
         conversation_context += "\n"
     
-    relevance_prompt = """Determine if this is about healthcare/QuickDoc services OR completely off-topic.
-Consider the conversation context to understand follow-up questions.
+    relevance_prompt = """You are a strict filter for QuickDoc healthcare chatbot. Your job is to BLOCK off-topic questions.
 
-HEALTHCARE-RELATED (respond "yes"):
-- Finding doctors (by specialty, symptoms, location)
-- Follow-up questions about previously discussed doctors/symptoms/locations
-- Short location responses like "in [city]" when following up on doctor searches
-- Questions about QuickDoc services, policies, hours, insurance, appointments
-- Account/login questions (login, registration, email, password, profile)
-- Medical symptoms with intent to find a doctor
-- FAQ about healthcare services
-- "What is QuickDoc?", "Can I...", "How do I..." about QuickDoc services
-- Booking policies, appointment rules, scheduling questions
+Determine if the user's question is DIRECTLY about healthcare/QuickDoc services OR completely off-topic.
+Be VERY STRICT - if it's not clearly healthcare-related, respond "no".
 
-OFF-TOPIC (respond "no"):
-- Weather, sports, news, entertainment (when NOT following healthcare discussion)
-- Jokes, stories, poems, games
-- Technology, cooking, travel (not healthcare-related)
-- General knowledge questions (math, history, science)
-- Personal advice unrelated to healthcare
-- Random greetings without context (just "hi", "hello")
+HEALTHCARE-RELATED (respond "yes") - ONLY these:
+- Finding/searching for doctors (by specialty, symptoms, location)
+- "I have [symptom]" - wanting to find a doctor for that symptom
+- "I need [specialty] doctor" - requesting specific doctor type
+- Follow-up questions about previously discussed doctors/symptoms (when context shows healthcare discussion)
+- Short location responses like "in [city]" when continuing doctor search
+- QuickDoc platform questions ("What is QuickDoc?", "How to use QuickDoc?")
+- Account/login for QuickDoc (registration, password, email, profile)
+- Appointment policies/rules ("Can I book...", "How do I book...")
+- Insurance, payments, hospital hours related to healthcare
+
+OFF-TOPIC (respond "no") - BLOCK these:
+- Medical education questions ("What causes [X]?", "What are symptoms of [X]?", "[Condition] will result into?")
+- Medical knowledge questions ("What happens if...", "How does [medical condition] work?")
+- Diagnosis questions ("Do I have [condition]?", "Is this [disease]?")
+- Treatment questions ("What is the cure for...", "How to treat...")
+- Medical explanations ("Why does [symptom] happen?", "What is [medical term]?")
+- Entertainment: TV shows, movies, anime, cartoons, celebrities
+- Sports, games, hobbies
+- General definitions NOT related to doctor search
+- Technology, programming, software (unless about QuickDoc platform)
+- Weather, news, politics
+- Cooking, recipes, food
+- Travel, hotels, vacation
+- Education, history, geography, science
+- Math, physics, chemistry
+- Jokes, stories, poems, riddles
+- Random greetings without context ("hi", "hello" alone)
+
+CRITICAL RULES:
+1. What is[X] is a off topic question unless it is FINDING DOCTORS or QuickDoc SERVICES, ONLY allow questions about FINDING DOCTORS or QuickDoc SERVICES
+2. BLOCK all medical education/knowledge/diagnosis questions
+3. "I have [symptom]" → yes (wants doctor). "[Symptom] causes what?" → no (wants education)
+4. When in doubt, respond "no" (BLOCK by default)
 
 Respond with ONLY: yes or no"""
     
@@ -129,29 +147,14 @@ Respond with ONLY: yes or no"""
         is_relevant = relevance_check.content.strip().lower()
         
         if "no" in is_relevant:
-            # Generate contextual off-topic response
-            off_topic_prompt = f"""You are QuickDoc Assistant. Write ONLY your direct response.
-
-User said: "{last_message}"
-
-Write a brief, friendly response (2-3 sentences):
-1. Briefly acknowledge what they asked
-2. Say you can't help with that
-3. Redirect to finding doctors or healthcare questions
-
-CRITICAL: Write ONLY your response. NO labels. Start directly.
-
-Your response:"""
-            
-            try:
-                contextual_response = llm.invoke([HumanMessage(content=off_topic_prompt)])
-                rejection = contextual_response.content
-            except Exception as e:
-                print(f"Error generating off-topic response: {e}")
-                rejection = (
-                    "I'm QuickDoc Assistant, specialized in helping you find doctors and "
-                    "answering healthcare service questions. What can I help you with today?"
-                )
+            # Use generic rejection without answering the question
+            rejection = (
+                "I'm QuickDoc Assistant, specialized in helping you find doctors and "
+                "answering healthcare service questions. I can help you:\n"
+                "• Find doctors by specialty, location, or symptoms\n"
+                "• Answer questions about QuickDoc services and policies\n\n"
+                "What can I help you with today?"
+            )
             
             state["messages"].append(AIMessage(content=rejection))
             state["next_node"] = "end"

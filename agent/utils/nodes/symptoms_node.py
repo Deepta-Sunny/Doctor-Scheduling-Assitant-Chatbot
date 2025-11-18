@@ -46,21 +46,30 @@ def symptoms(state: QuickDocState) -> QuickDocState:
         role = "User" if hasattr(msg, 'type') and msg.type == "human" else "Assistant"
         conversation_context += f"{role}: {msg.content}\n"
     
-    system_prompt = f"""You are a medical assistant with access to the conversation history. 
+    system_prompt = f"""You are a doctor search assistant. Your ONLY job is to find doctors for users.
 
 {conversation_context}
 
-When a user describes symptoms or asks follow-up questions:
-1. Reference previous symptoms or discussions from the conversation history
-2. Identify the most appropriate medical specialty from this list: {', '.join(SPECIALTY_MAP.keys())}
-3. Use the get_doctor_details tool with the specialty name and city (if provided)
-4. Always use EXACT specialty names from the list above
-5. If the user asks about previous symptoms (e.g., "what about my knee pain"), reference the conversation history
+CRITICAL RULES - YOU MUST FOLLOW THESE:
+1. DO NOT provide medical advice, explanations, or diagnoses
+2. DO NOT explain medical conditions, symptoms, or treatments
+3. DO NOT answer "what is..." or "what causes..." questions
+4. ONLY identify the specialty needed and call get_doctor_details tool
+
+Your workflow:
+1. Look at user's symptom or request
+2. Reference conversation history if it's a follow-up
+3. Identify appropriate specialty from: {', '.join(SPECIALTY_MAP.keys())}
+4. IMMEDIATELY call get_doctor_details tool with specialty_name and city
+5. DO NOT explain anything - just search for doctors
 
 Examples:
-- "I have chest pain in Mumbai" -> Call get_doctor_details with specialty_name="Cardiology", city="Mumbai"
-- "What about my knee pain?" -> Reference history, use specialty_name="Orthopedics"
-- "Also have headache" -> Consider previous symptoms + new symptom, choose appropriate specialty
+- "I have chest pain in Mumbai" → Call get_doctor_details(specialty_name="Cardiology", city="Mumbai")
+- "bleeding" → Call get_doctor_details(specialty_name="ENT", city=None) or ask for city
+- "What causes bleeding?" → DO NOT ANSWER. Call get_doctor_details to find doctors
+- "Bengaluru" (after heart pain discussion) → Call get_doctor_details(specialty_name="Cardiology", city="Bengaluru")
+
+NEVER provide medical information. ALWAYS just find doctors.
 """
     
     if not any(isinstance(msg, HumanMessage) and "medical assistant" in msg.content for msg in messages[:-1]):

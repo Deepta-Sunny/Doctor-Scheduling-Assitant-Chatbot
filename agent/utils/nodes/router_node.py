@@ -77,26 +77,36 @@ def intent_router(state: QuickDocState) -> QuickDocState:
         intent_prompt = """You are an intent classifier for a medical chatbot. 
         Analyze the user's message IN THE CONTEXT of the conversation history and classify it into ONE of these categories:
         
-        1. "faq" - Questions about POLICIES, RULES, PROCEDURES, SERVICE INFORMATION:
+        1. "symptoms" - MEDICAL CONCERNS and DOCTOR FINDING (MOST COMMON):
+           - Physical symptoms or health issues (pain, fever, illness)
+           - Active medical needs requiring immediate doctor consultation
+           - Specific doctor specialty requests
+           - Follow-up questions about previously discussed symptoms/doctors
+           - SHORT LOCATION RESPONSES when continuing doctor search (e.g., just "Mumbai", "Bengaluru")
+           - City names following symptom/specialty discussion
+        
+        2. "faq" - Questions about POLICIES, RULES, PROCEDURES, SERVICE INFO:
            - Questions starting with "Can I...?" about booking/service rules
            - Questions starting with "How do I...?" about procedures
            - Questions about permissions, restrictions, or what's allowed
            - Service details: hours, insurance, payments, registration, cancellation
            - Any question asking if something is PERMITTED or NOT PERMITTED
         
-        2. "symptoms" - MEDICAL CONCERNS and DOCTOR FINDING:
-           - Physical symptoms or health issues (pain, fever, illness)
-           - Active medical needs requiring immediate doctor consultation
-           - Specific doctor specialty requests based on diagnosed conditions
-           - Follow-up questions about previously discussed symptoms
+        3. "clarify" - ONLY for truly unclear messages with no context
+           - Random words with no conversation history
+           - Completely ambiguous messages
         
-        3. "clarify" - Unclear, ambiguous, or too short messages
+        CRITICAL RULES:
+        - If conversation shows symptoms/doctor discussion and user says just a city name → "symptoms"
+        - If user said symptom/condition before and now gives location → "symptoms"
+        - Single-word city names after medical discussion → "symptoms"
+        - When in doubt between symptoms and clarify → choose "symptoms"
         
-        KEY DISTINCTION:
-        - "Can I [action related to booking/service]?" = faq (policy question)
-        - "I have [medical symptom]" = symptoms (medical concern)
-        - "I need [doctor type] for [condition]" = symptoms (medical need)
-        - Follow-up like "what about that?" = use conversation context to classify
+        KEY EXAMPLES:
+        - Previous: "I have heart pain" | Current: "Bengaluru" → symptoms (location follow-up)
+        - Previous: "Show cardiologists" | Current: "Mumbai" → symptoms (location follow-up)
+        - "Can I book for someone else?" → faq (policy question)
+        - "I have fever" → symptoms (medical concern)
         
         Respond with ONLY ONE WORD: faq, symptoms, or clarify"""
         
