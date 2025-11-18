@@ -3,36 +3,54 @@ from agent.utils.nodes.clarify_node import clarify
 from agent.utils.nodes.faq_node import faq
 from agent.utils.nodes.router_node import intent_router
 from agent.utils.nodes.symptoms_node import symptoms
+from agent.utils.nodes.input_guardrails_node import input_guardrails
 from agent.utils.state.quickdoc_state import QuickDocState
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph,START,END
 
 def create_workflow():
-    """This is a function to create a compile the graph"""
+    """
+    Create and compile the LangGraph workflow with guardrails.
+    Flow: Input Guardrails -> Router -> Handler -> Output Guardrails -> End
+    """
 
     memory = MemorySaver()
     workflow = StateGraph(QuickDocState)
 
-    workflow.add_node("intent_router_node",intent_router)
-    workflow.add_node("clarify_node",clarify)
-    workflow.add_node("symptoms_node",symptoms)
-    workflow.add_node("faq_node",faq)
-    workflow.add_node("tools_node",tools_node)
+    # Add all nodes with input guardrails
+    workflow.add_node("input_guardrails_node", input_guardrails)
+    workflow.add_node("intent_router_node", intent_router)
+    workflow.add_node("clarify_node", clarify)
+    workflow.add_node("symptoms_node", symptoms)
+    workflow.add_node("faq_node", faq)
+    workflow.add_node("tools_node", tools_node)
 
-    workflow.add_edge(START,"intent_router_node")
+    # Start with input guardrails (first line of defense)
+    workflow.add_edge(START, "input_guardrails_node")
+    
+    # From input guardrails: either block (end) or pass to router
+    workflow.add_conditional_edges(
+        "input_guardrails_node",
+        lambda state: state.get("next_node", "intent_router_node"),
+        {
+            "intent_router_node": "intent_router_node",
+            "clarify_node": "clarify_node",
+            "end": END
+        }
+    )
+    # Route from intent router to appropriate handler
     workflow.add_conditional_edges(
         "intent_router_node",
-        lambda state:state.get("next_node", "end"),
+        lambda state: state.get("next_node", "clarify_node"),
         {
             "clarify_node": "clarify_node",
             "symptoms_node": "symptoms_node",
-            "faq_node": "faq_node",
-            "end": END
+            "faq_node": "faq_node"
         }
     )
     workflow.add_conditional_edges(
         "symptoms_node",
-        lambda state:state.get("use_tools", False),
+        lambda state: state.get("use_tools", False),
         {
             True: "tools_node",
             False: END
@@ -40,7 +58,7 @@ def create_workflow():
     )
     workflow.add_conditional_edges(
         "faq_node",
-        lambda state:state.get("use_tools", False),
+        lambda state: state.get("use_tools", False),
         {
             True: "tools_node",
             False: END
@@ -48,14 +66,14 @@ def create_workflow():
     )
     workflow.add_conditional_edges(
         "tools_node",
-        lambda state:state.get("next_node", "end"),
+        lambda state: state.get("next_node", "end"),
         {
             "symptoms_node": "symptoms_node",
             "faq_node": "faq_node",
             "end": END
         }
     )
-    workflow.add_edge("clarify_node",END)
+    workflow.add_edge("clarify_node", END)
 
     agent = workflow.compile(checkpointer=memory)
 
@@ -82,8 +100,6 @@ def visualize_graph():
         print("Graph visualization saved as 'workflow_graph.png'")
     except Exception as exception:
         print(f"Error generating graph visualization: {exception}")
-        print("Make sure you have 'pygraphviz' installed: pip install pygraphviz")
-
-
+        
 if __name__ == "__main__":
     visualize_graph()

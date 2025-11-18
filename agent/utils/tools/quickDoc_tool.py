@@ -50,7 +50,8 @@ def get_doctor_details(specialty_name: str, city: str = None) -> str:
             Doctor, User.UserId == Doctor.UserId
         ).filter(
             User.IsDoctor == True,
-            Doctor.Speciality == specialty_id
+            Doctor.Speciality == specialty_id,
+            Doctor.StatusType == 1 
         )
         
         # Add city filter if provided
