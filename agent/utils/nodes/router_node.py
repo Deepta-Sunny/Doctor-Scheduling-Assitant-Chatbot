@@ -24,11 +24,9 @@ def intent_router(state: QuickDocState) -> QuickDocState:
         state["next_node"] = "clarify_node"
         return state
     
-    # Get last message and recent context (up to 10 messages)
     last_message = messages[-1].content.lower()
     recent_messages = messages[-10:] if len(messages) >= 10 else messages
     
-    # Build conversation context for intent detection
     conversation_context = ""
     if conversation_summary:
         conversation_context = f"Previous conversation summary: {conversation_summary}\n\n"
@@ -38,7 +36,6 @@ def intent_router(state: QuickDocState) -> QuickDocState:
         role = "User" if hasattr(msg, 'type') and msg.type == "human" else "Assistant"
         conversation_context += f"{role}: {msg.content}\n"
     
-    # First check if the question is healthcare-related
     relevance_prompt = """
     You are a virtual assistant for the QuickDoc.
     Determine if this question is related to healthcare, medical services, doctor appointments,
@@ -66,7 +63,6 @@ def intent_router(state: QuickDocState) -> QuickDocState:
 
     
     try:
-        # Check if question is healthcare-related with conversation context
         relevance_check = llm.invoke([
             HumanMessage(content=relevance_prompt),
             HumanMessage(content=f"Conversation context:\n{conversation_context}\n\nIs this healthcare-related: {last_message}")
@@ -75,13 +71,9 @@ def intent_router(state: QuickDocState) -> QuickDocState:
         is_relevant = relevance_check.content.strip().lower()
         
         if "no" in is_relevant or "not" in is_relevant:
-            # # Reject non-healthcare questions
-            # rejection_message = "Sorry, we can't respond to questions that are not related to healthcare or diagnosis. I can only assist with medical concerns, doctor appointments, and our healthcare services."
-            # state["messages"].append(AIMessage(content=rejection_message))
             state["next_node"] = "clarify_node"
             return state
         
-        # If healthcare-related, classify intent with conversation context
         intent_prompt = """You are an intent classifier for a medical chatbot. 
         Analyze the user's message IN THE CONTEXT of the conversation history and classify it into ONE of these categories:
         

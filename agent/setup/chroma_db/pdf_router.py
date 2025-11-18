@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from agent.setup.chroma_db.pdf_processor import FAQProcessor
+from agent.models.responses import PDFProcessResponse
 import os
 import shutil
 
@@ -19,8 +20,8 @@ def get_faq_processor():
     return faq_processor
 
 
-@router.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
+@router.post("/upload", response_model=PDFProcessResponse)
+async def upload_pdf(file: UploadFile = File(...)) -> PDFProcessResponse:
     """
     Upload and process FAQ PDF file.
     

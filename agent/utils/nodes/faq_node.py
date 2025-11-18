@@ -25,20 +25,17 @@ def faq(state: QuickDocState) -> QuickDocState:
     if not messages:
         return state
     
-    # Build conversation context
     conversation_context = ""
     if conversation_summary:
         conversation_context = f"Previous conversation summary:\n{conversation_summary}\n\n"
     
-    # Include last 10 messages for context
     recent_messages = messages[-10:] if len(messages) >= 10 else messages
     if len(recent_messages) > 1:
         conversation_context += "Recent conversation:\n"
-        for msg in recent_messages[:-1]:  # Exclude current message
+        for msg in recent_messages[:-1]:  
             role = "User" if hasattr(msg, 'type') and msg.type == "human" else "Assistant"
             conversation_context += f"{role}: {msg.content}\n"
     
-    # Add system prompt with conversation context
     system_prompt = f"""You are a helpful assistant with access to the QuickDoc FAQ database and conversation history.
 
 {conversation_context}

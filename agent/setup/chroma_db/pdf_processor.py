@@ -1,5 +1,6 @@
 from langchain_community.document_loaders import PyPDFLoader
 from agent.setup.chroma_db.chroma_setup import get_chroma_client, get_or_create_collection
+from agent.models.responses import PDFProcessResponse, SearchResult, CollectionStats
 from sentence_transformers import SentenceTransformer
 import re
 from typing import List, Dict
@@ -32,7 +33,7 @@ class FAQProcessor:
 
         return chunks
 
-    async def process_pdf(self, pdf_path: str, filename: str) -> Dict:
+    async def process_pdf(self, pdf_path: str, filename: str) -> PDFProcessResponse:
         try:
             loader = PyPDFLoader(pdf_path)
             pages = loader.load()
@@ -59,23 +60,21 @@ class FAQProcessor:
                 ids=ids
             )
 
-            return {
-                "success": True,
-                "filename": filename,
-                "total_pages": len(pages),
-                "total_chunks": len(faq_chunks),
-                "message": f"Successfully processed {filename} with Q/A chunking"
-            }
+            return PDFProcessResponse(
+                success=True,
+                filename=filename,
+                total_pages=len(pages),
+                total_chunks=len(faq_chunks),
+                message=f"Successfully processed {filename} with Q/A chunking"
+            )
 
         except Exception as e:
-            return {
-                "success": False,
-                "filename": filename,
-                "error": str(e),
-                "message": f"Failed to process {filename}: {str(e)}"
-            }
-
-    # SEARCH
+            return PDFProcessResponse(
+                success=False,
+                filename=filename,
+                error=str(e),
+                message=f"Failed to process {filename}: {str(e)}"
+            )
 
     def search_similar_documents(self, query: str, n_results: int = 4) -> Dict:
         try:
@@ -92,8 +91,6 @@ class FAQProcessor:
             print(f"Search error: {e}")
             return {}
 
-
-    # CLEAR COLLECTION
  
     def clear_collection(self):
         try:
@@ -103,7 +100,6 @@ class FAQProcessor:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    # STATS
 
     def get_collection_stats(self) -> Dict:
         try:

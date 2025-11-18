@@ -20,7 +20,6 @@ def clarify(state: QuickDocState) -> QuickDocState:
     print("********routed to clarify_node********")
     
     if not messages:
-        # Initial greeting
         clarification = """Hello! I'm your medical scheduling assistant. I can help you with:
 
 1. **Finding Doctors**: Tell me your symptoms or the type of doctor you need, and your location
@@ -33,20 +32,17 @@ How can I assist you today?"""
     
     last_message = messages[-1].content
     
-    # Build conversation context
     conversation_context = ""
     if conversation_summary:
         conversation_context = f"Previous conversation summary:\n{conversation_summary}\n\n"
     
-    # Include last 10 messages for context
     recent_messages = messages[-10:] if len(messages) >= 10 else messages
     if len(recent_messages) > 1:
         conversation_context += "Recent conversation:\n"
-        for msg in recent_messages[:-1]:  # Exclude current message
+        for msg in recent_messages[:-1]:  
             role = "User" if hasattr(msg, 'type') and msg.type == "human" else "Assistant"
             conversation_context += f"{role}: {msg.content}\n"
     
-    # Create a prompt to generate helpful clarification with context
     system_prompt = f"""You have access to the conversation history:
 
 {conversation_context}
@@ -83,7 +79,6 @@ Keep your response concise (2-3 sentences) and friendly."""
         response = llm.invoke([HumanMessage(content=system_prompt)])
         clarification = response.content
     except Exception as e:
-        # Fallback clarification message
         clarification = """I'd be happy to help! Could you please provide more details? 
 
 For medical appointments, please share:

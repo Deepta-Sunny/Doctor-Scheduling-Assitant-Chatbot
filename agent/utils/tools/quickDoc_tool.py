@@ -1,7 +1,8 @@
 from langchain.tools import tool
 from agent.setup.sql_db.database_setup import SessionLocal, Doctor, User
+from agent.models.tool_inputs import DoctorSearchInput
+from pydantic import ValidationError
 
-# Specialty mapping: name -> ID
 SPECIALTY_MAP = {
     "Dermatology": 1, "Cardiology": 2, "Neurology": 3, "Orthopedics": 4,
     "Pediatrics": 5, "Gynecology": 6, "Ophthalmology": 7, "Psychiatry": 8,
@@ -26,6 +27,21 @@ def get_doctor_details(specialty_name: str, city: str = None) -> str:
     Returns:
         Formatted string with doctor details including name, experience, fees, hospital, and address.
     """
+    # Validate inputs using Pydantic
+    try:
+        validated_input = DoctorSearchInput(specialty_name=specialty_name, city=city)
+        specialty_name = validated_input.specialty_name  # Use canonical form
+        city = validated_input.city  # Use cleaned city name
+    except ValidationError as e:
+        # Extract user-friendly error message
+        errors = e.errors()
+        if 'specialty_name' in str(errors[0].get('loc', '')):
+            # Get available specialties for helpful message
+            available = ", ".join(sorted(SPECIALTY_MAP.keys()))
+            return f"I don't have doctors for that specialty. Available specialties are: {available}"
+        else:
+            return f"Please provide a valid city name."
+    
     db = SessionLocal()
     
     try:

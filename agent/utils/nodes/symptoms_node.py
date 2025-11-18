@@ -9,10 +9,8 @@ load_dotenv()
 
 llm = setup_llm()
 
-# Bind tools to the LLM
 llm_with_tools = llm.bind_tools(quickDoc_tools)
 
-# Specialty mapping: name -> ID (for reference, actual mapping is in the tool)
 SPECIALTY_MAP = {
     "Dermatology": 1, "Cardiology": 2, "Neurology": 3, "Orthopedics": 4,
     "Pediatrics": 5, "Gynecology": 6, "Ophthalmology": 7, "Psychiatry": 8,
@@ -38,19 +36,16 @@ def symptoms(state: QuickDocState) -> QuickDocState:
     
     user_text = messages[-1].content
     
-    # Build conversation context from history
     conversation_context = ""
     if conversation_summary:
         conversation_context = f"Previous conversation summary:\n{conversation_summary}\n\n"
     
-    # Include last 10 messages for context
     recent_messages = messages[-10:] if len(messages) >= 10 else messages
     conversation_context += "Recent conversation:\n"
-    for msg in recent_messages[:-1]:  # Exclude current message
+    for msg in recent_messages[:-1]:  
         role = "User" if hasattr(msg, 'type') and msg.type == "human" else "Assistant"
         conversation_context += f"{role}: {msg.content}\n"
     
-    # Enhanced system prompt to guide the LLM with conversation context
     system_prompt = f"""You are a medical assistant with access to the conversation history. 
 
 {conversation_context}
@@ -68,23 +63,19 @@ Examples:
 - "Also have headache" -> Consider previous symptoms + new symptom, choose appropriate specialty
 """
     
-    # Prepend system prompt if not already there
     if not any(isinstance(msg, HumanMessage) and "medical assistant" in msg.content for msg in messages[:-1]):
         messages_with_context = [HumanMessage(content=system_prompt)] + messages
     else:
         messages_with_context = messages
     
     try:
-        # Invoke LLM with tools to handle doctor search
         response = llm_with_tools.invoke(messages_with_context)
         print("**********symptomps response*****************",response)
-        # If the LLM wants to use tools (search for doctors)
         if response.tool_calls:
             state["messages"].append(response)
             state["use_tools"] = True
         
         else:
-            # Direct response without tools
             state["messages"].append(response)
             state["use_tools"] = False
             

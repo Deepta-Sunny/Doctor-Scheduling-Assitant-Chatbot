@@ -1,5 +1,7 @@
 from langchain.tools import tool
 from agent.setup.chroma_db.pdf_processor import FAQProcessor
+from agent.models.tool_inputs import FAQSearchInput
+from pydantic import ValidationError
 
 _faq_processor = None
 
@@ -32,6 +34,17 @@ def search_faq(query: str, n_results: int = 5) -> str:
     Returns:
         Official FAQ information that MUST be used as the authoritative answer
     """
+    try:
+        validated_input = FAQSearchInput(query=query, n_results=n_results)
+        query = validated_input.query 
+        n_results = validated_input.n_results  
+    except ValidationError as e:
+        error_detail = e.errors()[0]
+        if 'query' in str(error_detail.get('loc', '')):
+            return "Please provide a more detailed question (at least 3 characters)."
+        else:
+            return "Invalid search parameters. Please try again."
+    
     try:
         processor = get_faq_processor()
         results = processor.search_similar_documents(query, n_results)
