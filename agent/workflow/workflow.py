@@ -4,6 +4,7 @@ from agent.utils.nodes.faq_node import faq
 from agent.utils.nodes.router_node import intent_router
 from agent.utils.nodes.symptoms_node import symptoms
 from agent.utils.nodes.input_guardrails_node import input_guardrails
+from agent.utils.nodes.output_guardrails_node import output_guardrails
 from agent.utils.state.quickdoc_state import QuickDocState
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph,START,END
@@ -17,13 +18,14 @@ def create_workflow():
     memory = MemorySaver()
     workflow = StateGraph(QuickDocState)
 
-    # Add all nodes with input guardrails
+    # Add all nodes with input and output guardrails
     workflow.add_node("input_guardrails_node", input_guardrails)
     workflow.add_node("intent_router_node", intent_router)
     workflow.add_node("clarify_node", clarify)
     workflow.add_node("symptoms_node", symptoms)
     workflow.add_node("faq_node", faq)
     workflow.add_node("tools_node", tools_node)
+    workflow.add_node("output_guardrails_node", output_guardrails)
 
     # Start with input guardrails (first line of defense)
     workflow.add_edge(START, "input_guardrails_node")
@@ -53,7 +55,7 @@ def create_workflow():
         lambda state: state.get("use_tools", False),
         {
             True: "tools_node",
-            False: END
+            False: "output_guardrails_node"
         }
     )
     workflow.add_conditional_edges(
@@ -61,7 +63,7 @@ def create_workflow():
         lambda state: state.get("use_tools", False),
         {
             True: "tools_node",
-            False: END
+            False: "output_guardrails_node"
         }
     )
     workflow.add_conditional_edges(
@@ -70,10 +72,13 @@ def create_workflow():
         {
             "symptoms_node": "symptoms_node",
             "faq_node": "faq_node",
-            "end": END
+            "end": "output_guardrails_node"
         }
     )
-    workflow.add_edge("clarify_node", END)
+    workflow.add_edge("clarify_node", "output_guardrails_node")
+    
+    # Output guardrails is the final node before user
+    workflow.add_edge("output_guardrails_node", END)
 
     agent = workflow.compile(checkpointer=memory)
 

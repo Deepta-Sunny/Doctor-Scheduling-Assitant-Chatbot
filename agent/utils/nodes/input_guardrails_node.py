@@ -28,7 +28,7 @@ def input_guardrails(state: QuickDocState) -> QuickDocState:
     
     # 1. Check for medical emergencies (highest priority)
     emergency_keywords = [
-        "chest pain", "can't breathe", "can not breathe", "cannot breathe",
+        "can't breathe", "can not breathe", "cannot breathe",
         "heart attack", "suicide", "kill myself", "severe bleeding", 
         "unconscious", "stroke", "overdose", "poisoning"
     ]
@@ -37,7 +37,7 @@ def input_guardrails(state: QuickDocState) -> QuickDocState:
         emergency_response = (
             " **MEDICAL EMERGENCY DETECTED** \n\n"
             "If you are experiencing a medical emergency:\n"
-            "• Call 911 immediately (USA) or your local emergency number\n"
+            "• Call 102 immediately (India) or your local emergency number\n"
             "• Go to the nearest Emergency Room\n"
             "• Call an ambulance\n\n"
             "I cannot help with medical emergencies. Your safety is the top priority."
