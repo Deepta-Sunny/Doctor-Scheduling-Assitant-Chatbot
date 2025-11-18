@@ -36,18 +36,9 @@ def faq(state: QuickDocState) -> QuickDocState:
             role = "User" if hasattr(msg, 'type') and msg.type == "human" else "Assistant"
             conversation_context += f"{role}: {msg.content}\n"
     
-    system_prompt = f"""You are a helpful assistant with access to the QuickDoc FAQ database and conversation history.
+    system_prompt = f"""{conversation_context}
 
-{conversation_context}
-
-When answering questions:
-1. Reference the conversation history to provide context-aware responses
-2. If the user asks about previous topics (e.g., "what about my appointment"), check the history
-3. If asked for a summary of the chat, provide a concise overview of the conversation
-4. Always search the FAQ database for policy and service questions
-5. Maintain continuity with previous discussion
-
-Current user question follows."""
+Answer user questions directly using the FAQ database. Be conversational and helpful. Don't explain your process or mention the database.If needed just cut short all the explanation in faq but don't skip the answer. """
     
     # Prepend system prompt to messages
     messages_with_context = [HumanMessage(content=system_prompt)] + messages

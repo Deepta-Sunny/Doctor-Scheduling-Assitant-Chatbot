@@ -36,7 +36,6 @@ def create_workflow():
         lambda state: state.get("next_node", "intent_router_node"),
         {
             "intent_router_node": "intent_router_node",
-            "clarify_node": "clarify_node",
             "end": END
         }
     )
@@ -68,13 +67,15 @@ def create_workflow():
     )
     workflow.add_conditional_edges(
         "tools_node",
-        lambda state: state.get("next_node", "end"),
+        lambda state: state.get("calling_node", "symptoms_node"),
         {
             "symptoms_node": "symptoms_node",
-            "faq_node": "faq_node",
+            "faq_node": "faq_node"
         }
     )
-    workflow.add_edge("clarify_node", "output_guardrails_node")
+    
+    # Clarify node asks for more info, then user responds and goes back to router
+    workflow.add_edge("clarify_node", "intent_router_node")
     
     # Output guardrails is the final node before user
     workflow.add_edge("output_guardrails_node", END)

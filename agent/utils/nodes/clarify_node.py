@@ -43,11 +43,9 @@ How can I assist you today?"""
             role = "User" if hasattr(msg, 'type') and msg.type == "human" else "Assistant"
             conversation_context += f"{role}: {msg.content}\n"
     
-    system_prompt = f"""You have access to the conversation history:
+    system_prompt = f"""{conversation_context}
 
-{conversation_context}
-
-The user just said: "{last_message}"
+User message: "{last_message}"
 
 This message is unclear or too vague. Generate a helpful, friendly response that:
 1. References the conversation history if relevant (e.g., if they asked about something previously discussed)
