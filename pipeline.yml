@@ -6,9 +6,9 @@ pool:
 
 variables:
   pythonVersion: '3.11'
-  azureServiceConnectionId: 'YOUR_SERVICE_CONNECTION_ID'
-  appServiceName: 'YOUR_APP_SERVICE_NAME'
-  resourceGroupName: 'YOUR_RESOURCE_GROUP_NAME'
+  azureServiceConnectionId: '3850ffc4-3e9b-423a-bebf-c1583132f3cd'
+  appServiceName: 'QuickDocAssistance'
+  resourceGroupName: 'QuickDoc-ChatAssistance'
 
 stages:
 - stage: Build
@@ -47,13 +47,9 @@ stages:
   dependsOn: Build
   condition: succeeded()
   jobs:
-  - deployment: DeployJob
+  - job: DeployJob
     displayName: Deploy to App Service
-    environment: production
-    strategy:
-      runOnce:
-        deploy:
-          steps:
+    steps:
           - task: DownloadBuildArtifacts@0
             inputs:
               buildType: 'current'
