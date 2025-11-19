@@ -30,8 +30,9 @@ stages:
       displayName: 'Install dependencies'
 
     - script: |
-        cp -r . $(Build.ArtifactStagingDirectory)/
-        cd $(Build.ArtifactStagingDirectory)
+        mkdir -p $(Build.ArtifactStagingDirectory)/app
+        cp -r . $(Build.ArtifactStagingDirectory)/app/
+        cd $(Build.ArtifactStagingDirectory)/app
         find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
         find . -name "*.pyc" -delete
       displayName: 'Prepare app for deployment'
