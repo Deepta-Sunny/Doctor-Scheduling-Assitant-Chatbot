@@ -57,6 +57,7 @@ stages:
         buildType: 'current'
         downloadType: 'single'
         artifactName: 'drop'
+        downloadPath: '$(Pipeline.Workspace)'
       displayName: 'Download artifacts'
 
     - task: AzureWebApp@1
@@ -66,4 +67,5 @@ stages:
         appName: '$(appServiceName)'
         package: '$(Pipeline.Workspace)/drop'
         runtimeStack: 'PYTHON|3.11'
+        startupCommand: 'gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app'
       displayName: 'Deploy to Azure App Service'
