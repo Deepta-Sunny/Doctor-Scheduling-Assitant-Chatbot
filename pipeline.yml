@@ -39,7 +39,7 @@ stages:
         find . -name "*.pyc" -delete
       displayName: 'Prepare app for deployment'
 
-    # ⭐ ZIP the app (important for FAST deployment)
+    
     - script: |
         cd $(Build.ArtifactStagingDirectory)/app
         zip -r ../app.zip .
@@ -60,6 +60,20 @@ stages:
   - job: DeployJob
     displayName: Deploy to App Service
     steps:
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: '$(azureServiceConnectionId)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          echo "Cleaning old deployment files from App Service..."
+          KUDU_CMD="https://${appServiceName}.scm.azurewebsites.net/api/command"
+          curl -X POST "$KUDU_CMD" \
+            -u "$($env:username):$($env:password)" \
+            -H "Content-Type: application/json" \
+            -d '{ "command": "rm -rf /home/site/wwwroot/* /home/site/wwwroot/.zipdeploy /tmp/zipdeploy /home/site/deployments/*" }'
+      displayName: 'Clean previous deployment on App Service'
+
     - task: DownloadBuildArtifacts@0
       inputs:
         buildType: 'current'
