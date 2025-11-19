@@ -24,7 +24,9 @@ stages:
 
     - script: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        # Filter out Windows-specific packages for Linux deployment
+        grep -v "pywinpty\|pyreadline\|pymssql\|pyodbc" requirements.txt > requirements-linux.txt || true
+        pip install -r requirements-linux.txt
       displayName: 'Install dependencies'
 
     - script: |
@@ -50,38 +52,18 @@ stages:
   - job: DeployJob
     displayName: Deploy to App Service
     steps:
-          - task: DownloadBuildArtifacts@0
-            inputs:
-              buildType: 'current'
-              downloadType: 'single'
-              artifactName: 'drop'
-              downloadPath: '$(Pipeline.Workspace)'
-            displayName: 'Download artifacts'
+    - task: DownloadBuildArtifacts@0
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'drop'
+      displayName: 'Download artifacts'
 
-          - task: AzureWebApp@1
-            inputs:
-              azureSubscription: '$(azureServiceConnectionId)'
-              appType: 'webAppLinux'
-              appName: '$(appServiceName)'
-              package: '$(Pipeline.Workspace)/drop'
-              runtimeStack: 'PYTHON|3.11'
-              startupCommand: 'python -m gunicorn --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000 app:app'
-            displayName: 'Deploy to Azure App Service'
-
-          - task: AzureAppServiceSettings@1
-            inputs:
-              azureSubscription: '$(azureServiceConnectionId)'
-              appName: '$(appServiceName)'
-              resourceGroupName: '$(resourceGroupName)'
-              appSettings: |
-                [
-                  {
-                    "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
-                    "value": "true"
-                  },
-                  {
-                    "name": "ENABLE_ORYX_BUILD",
-                    "value": "true"
-                  }
-                ]
-            displayName: 'Configure App Service settings'
+    - task: AzureWebApp@1
+      inputs:
+        azureSubscription: '$(azureServiceConnectionId)'
+        appType: 'webAppLinux'
+        appName: '$(appServiceName)'
+        package: '$(Pipeline.Workspace)/drop'
+        runtimeStack: 'PYTHON|3.11'
+      displayName: 'Deploy to Azure App Service'
