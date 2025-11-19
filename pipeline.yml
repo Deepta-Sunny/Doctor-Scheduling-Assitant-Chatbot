@@ -73,5 +73,15 @@ stages:
               azureSubscription: '$(azureServiceConnectionId)'
               appName: '$(appServiceName)'
               resourceGroupName: '$(resourceGroupName)'
-              appSettings: '-SCM_DO_BUILD_DURING_DEPLOYMENT true -ENABLE_ORYX_BUILD true'
+              appSettings: |
+                [
+                  {
+                    "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+                    "value": "true"
+                  },
+                  {
+                    "name": "ENABLE_ORYX_BUILD",
+                    "value": "true"
+                  }
+                ]
             displayName: 'Configure App Service settings'
