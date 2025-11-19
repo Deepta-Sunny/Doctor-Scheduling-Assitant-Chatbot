@@ -1,0 +1,83 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  pythonVersion: '3.11'
+  azureServiceConnectionId: 'YOUR_SERVICE_CONNECTION_ID'
+  appServiceName: 'YOUR_APP_SERVICE_NAME'
+  resourceGroupName: 'YOUR_RESOURCE_GROUP_NAME'
+
+stages:
+- stage: Build
+  displayName: Build Stage
+  jobs:
+  - job: BuildJob
+    displayName: Build FastAPI App
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(pythonVersion)'
+      displayName: 'Use Python $(pythonVersion)'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: 'Install dependencies'
+
+    - script: |
+        mkdir -p $(Build.ArtifactStagingDirectory)/app
+        cp -r . $(Build.ArtifactStagingDirectory)/app/
+        cd $(Build.ArtifactStagingDirectory)/app
+        find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+        find . -name "*.pyc" -delete
+      displayName: 'Prepare app for deployment'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)/app'
+        artifactName: 'drop'
+        publishLocation: 'Container'
+      displayName: 'Publish artifacts'
+
+- stage: Deploy
+  displayName: Deploy Stage
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeployJob
+    displayName: Deploy to App Service
+    environment: production
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'drop'
+              downloadPath: '$(Pipeline.Workspace)'
+            displayName: 'Download artifacts'
+
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: '$(azureServiceConnectionId)'
+              appType: 'webAppLinux'
+              appName: '$(appServiceName)'
+              package: '$(Pipeline.Workspace)/drop'
+              runtimeStack: 'PYTHON|3.11'
+              startupCommand: 'python -m gunicorn --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000 app:app'
+            displayName: 'Deploy to Azure App Service'
+
+          - task: AzureAppServiceSettings@1
+            inputs:
+              azureSubscription: '$(azureServiceConnectionId)'
+              appName: '$(appServiceName)'
+              resourceGroupName: '$(resourceGroupName)'
+              appSettings: |
+                -SCM_DO_BUILD_DURING_DEPLOYMENT true
+                -ENABLE_ORYX_BUILD true
+            displayName: 'Configure App Service settings'
