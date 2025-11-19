@@ -1,5 +1,5 @@
 trigger:
-  - develop
+  - main
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -30,9 +30,8 @@ stages:
       displayName: 'Install dependencies'
 
     - script: |
-        mkdir -p $(Build.ArtifactStagingDirectory)/app
-        cp -r . $(Build.ArtifactStagingDirectory)/app/
-        cd $(Build.ArtifactStagingDirectory)/app
+        cp -r . $(Build.ArtifactStagingDirectory)/
+        cd $(Build.ArtifactStagingDirectory)
         find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
         find . -name "*.pyc" -delete
       displayName: 'Prepare app for deployment'
