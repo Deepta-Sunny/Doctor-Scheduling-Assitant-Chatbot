@@ -1,0 +1,78 @@
+trigger:
+  - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  pythonVersion: '3.11'
+  azureServiceConnectionId: '3850ffc4-3e9b-423a-bebf-c1583132f3cd'
+  appServiceName: 'QuickDocAssistance'
+  resourceGroupName: 'QuickDoc-ChatAssistance'
+
+stages:
+- stage: Build
+  displayName: Build Stage
+  jobs:
+  - job: BuildJob
+    displayName: Build FastAPI App
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(pythonVersion)'
+      displayName: 'Use Python $(pythonVersion)'
+
+    - script: |
+        python -m pip install --upgrade pip
+        # Filter out Windows-specific packages for Linux deployment
+        grep -v "pywinpty\|pyreadline\|pymssql\|pyodbc" requirements.txt > requirements-linux.txt || true
+        pip install -r requirements-linux.txt
+      displayName: 'Install dependencies'
+
+    - script: |
+        mkdir -p $(Build.ArtifactStagingDirectory)/app
+        cp -r . $(Build.ArtifactStagingDirectory)/app/
+        cd $(Build.ArtifactStagingDirectory)/app
+
+        # Clean unnecessary files
+        find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+        find . -name "*.pyc" -delete
+      displayName: 'Prepare app for deployment'
+
+    - script: |
+        cd $(Build.ArtifactStagingDirectory)/app
+        zip -r ../app.zip .
+      displayName: 'Create ZIP package'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)/app.zip'
+        artifactName: 'drop'
+        publishLocation: 'Container'
+      displayName: 'Publish ZIP artifact'
+
+- stage: Deploy
+  displayName: Deploy Stage
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: DeployJob
+    displayName: Deploy to App Service
+    steps:
+    - task: DownloadBuildArtifacts@0
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'drop'
+        downloadPath: '$(Pipeline.Workspace)'
+      displayName: 'Download ZIP artifact'
+
+    - task: AzureWebApp@1
+      inputs:
+        azureSubscription: '$(azureServiceConnectionId)'
+        appType: 'webAppLinux'
+        appName: '$(appServiceName)'
+        package: '$(Pipeline.Workspace)/drop/app.zip'
+        runtimeStack: 'PYTHON|3.11'
+        startupCommand: 'gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app'
+      displayName: 'Deploy ZIP to Azure App Service'

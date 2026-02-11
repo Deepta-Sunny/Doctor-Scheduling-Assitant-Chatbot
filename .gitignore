@@ -1,0 +1,102 @@
+# -------------------------
+# Python
+# -------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+practice.ipynb
+
+
+# Virtual environment
+myenv/
+.venv/
+myenv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+*.so
+*.dll
+*.dylib
+
+# -------------------------
+# FastAPI / Uvicorn / Logs
+# -------------------------
+*.log
+*.pid
+*.sqlite3
+*.db
+
+# -------------------------
+# Environment & Config
+# -------------------------
+.env
+.env.local
+.env.*.local
+/secrets.json
+
+# DO keep config.py — but ignore any private copies
+config_local.py
+config_dev.py
+
+# -------------------------
+# Vector DB / LangChain data
+# -------------------------
+data/
+vector_index/
+chroma/
+faiss_index/
+*.faiss
+*.pkl
+
+# -------------------------
+# IDE / Editor
+# -------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -------------------------
+# Build / Distribution
+# -------------------------
+build/
+dist/
+*.egg-info/
+.eggs/
+*.spec
+
+# -------------------------
+# Testing / Coverage
+# -------------------------
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+
+# -------------------------
+# OS-specific
+# -------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# Docker / Azure
+# -------------------------
+*.bak
+docker-compose.override.yml
+.azure/
+local.settings.json
+
+# -------------------------
+# Caches / temporary
+# -------------------------
+__pycache__/
+.cache/
+tmp/
